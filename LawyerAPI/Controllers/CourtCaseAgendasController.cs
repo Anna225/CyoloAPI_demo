@@ -1,12 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LawyerAPI.Models;
-using Microsoft.AspNetCore.Http.Extensions;
 
 namespace LawyerAPI.Controllers
 {
@@ -53,12 +47,12 @@ namespace LawyerAPI.Controllers
 
         // GET: api/CourtCaseAgendas/GetCourtCaseByNo/2021-A023-W
         [HttpGet("GetCourtCaseByNo/{courtcaseno}")]
-        public async Task<ActionResult<CourtCaseAgenda>> GetCourtCaseByNo(string courtcaseno)
+        public async Task<ActionResult<CourtCaseAgenda>> GetCourtCaseByNo(int courtcaseno)
         {
             var courtCaseAgenda = await _context.CourtCaseAgenda
-                .Where(x => x.CourtCaseNo!.Contains(courtcaseno))
+                .Where(x => x.ID == courtcaseno)
                 .OrderByDescending(x => x.HearingDate)
-                .OrderByDescending(x => x.HearingTime)
+                .ThenByDescending(x => x.HearingTime)
                 .FirstOrDefaultAsync();
 
             if (courtCaseAgenda == null)
@@ -131,16 +125,6 @@ namespace LawyerAPI.Controllers
         private bool CourtCaseAgendaExists(int id)
         {
             return _context.CourtCaseAgenda.Any(e => e.ID == id);
-        }
-        
-         private bool CheckHeaderData(string headerKey)
-        {
-            HttpContext.Request.Headers.TryGetValue(headerKey, out var headerValue);
-            if (headerValue == "d23d9c7c11da4b228417e567c85fa80c")
-            {
-                return true;
-            }
-            return false;
         }
     }
 }

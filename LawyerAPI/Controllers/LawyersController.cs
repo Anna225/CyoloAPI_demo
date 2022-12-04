@@ -1,12 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LawyerAPI.Models;
-using Microsoft.AspNetCore.Http.Extensions;
 using LawyerAPI.Helper;
 
 namespace LawyerAPI.Controllers
@@ -81,51 +75,62 @@ namespace LawyerAPI.Controllers
 
         // POST: api/Lawyer/5
         [HttpPost("GetByCourtCase")]
-        public async Task<ActionResult<dynamic>> GetByCourtCase(SearchDto condition)
+        public async Task<ActionResult<dynamic>?> GetByCourtCase(SearchDto condition)
         {
             if (condition.ChamberID == null || condition.ChamberID == "")
             {
-                var lawyers = (from present in _context.Presentations
-                               join lawyer in _context.Lawyers
-                               on new { id = present.LawyerId, val = present.Available }
-                               equals new { id = lawyer.ID, val = 1 }
-                               join courtcase in _context.CourtCaseAgenda
-                               on new { courtno = present.CourtCaseNo }
-                               equals new { courtno = courtcase.CourtCaseNo }
-                               where courtcase.HearingGeneral == condition.HearingGeneral
-                               && (courtcase.HearingDate == condition.HearingDate)
-                               && (courtcase.HearingTime == condition.HearingTime)
-                               select new { lawyer }).Distinct();
-
-                if (lawyers == null)
+                var courtcase = _context.CourtCaseAgenda.AsNoTracking()
+                                    .Where(x => x.HearingGeneral == condition.HearingGeneral
+                                             && x.HearingDate == condition.HearingDate
+                                             && x.HearingTime == condition.HearingTime)
+                                    .FirstOrDefault();
+                if(courtcase != null)
                 {
-                    return NotFound();
+                    var lawyers = (from presentation in _context.Presentations
+                                   join lawyer in _context.Lawyers
+                                   on new { id = presentation.LawyerId, val = presentation.Available }
+                                   equals new { id = lawyer.ID, val = 1 }
+                                   where presentation.CourtCaseNo == courtcase.ID
+                                   select new { lawyer, presentation }).Distinct();
+                    if (lawyers == null)
+                    {
+                        return null;
+                    }
+                    return await lawyers.ToListAsync();
                 }
-                return await lawyers.ToListAsync();
+                else
+                {
+                    return null;
+                }
+                
             }
             else
             {
-                var lawyers = (from present in _context.Presentations
-                               join lawyer in _context.Lawyers
-                               on new { id = present.LawyerId, val = present.Available }
-                               equals new { id = lawyer.ID, val = 1 }
-                               join courtcase in _context.CourtCaseAgenda
-                               on new { courtno = present.CourtCaseNo }
-                               equals new { courtno = courtcase.CourtCaseNo }
-                               where courtcase.HearingGeneral == condition.HearingGeneral
-                               && (courtcase.HearingDate == condition.HearingDate)
-                               && (courtcase.HearingTime == condition.HearingTime)
-                               && (courtcase.ChamberID == condition.ChamberID)
-                               select new { lawyer }).Distinct();
-
-                if (lawyers == null)
+                var courtcase = _context.CourtCaseAgenda.AsNoTracking()
+                                    .Where(x => x.HearingGeneral == condition.HearingGeneral
+                                             && x.HearingDate == condition.HearingDate
+                                             && x.ChamberID == condition.ChamberID
+                                             && x.HearingTime == condition.HearingTime)
+                                    .FirstOrDefault();
+                if (courtcase != null)
                 {
-                    return NotFound();
+                    var lawyers = (from presentation in _context.Presentations
+                                   join lawyer in _context.Lawyers
+                                   on new { id = presentation.LawyerId, val = presentation.Available }
+                                   equals new { id = lawyer.ID, val = 1 }
+                                   where presentation.CourtCaseNo == courtcase.ID
+                                   select new { lawyer, presentation }).Distinct();
+                    if (lawyers == null)
+                    {
+                        return null;
+                    }
+                    return await lawyers.ToListAsync();
                 }
-                return await lawyers.ToListAsync();
+                else
+                {
+                    return null;
+                }
             }
-
-            return NotFound();
 
         }
 
@@ -199,16 +204,6 @@ namespace LawyerAPI.Controllers
         private bool LawyersExists(int id)
         {
             return (_context.Lawyers?.Any(e => e.ID == id)).GetValueOrDefault();
-        }
-        
-        private bool CheckHeaderData(string headerKey)
-        {
-            HttpContext.Request.Headers.TryGetValue(headerKey, out var headerValue);
-            if (headerValue == "d23d9c7c11da4b228417e567c85fa80c")
-            {
-                return true;
-            }
-            return false;
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using LawyerAPI.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,21 +15,21 @@ namespace LawyerAPI.Controllers
             _context = context;
         }
 
-        // GET: api/Presentations/2021-1155-A
+        // GET: api/Presentations/20211155
         [HttpGet("GetByCourtCaseNo/{courtcaseno}")]
-        public async Task<ActionResult<IEnumerable<dynamic>>> GetAvailableLawyersByCourtCaseNo(string courtcaseno)
+        public async Task<ActionResult<IEnumerable<dynamic>>?> GetAvailableLawyersByCourtCaseNo(int courtcaseno)
         {
             var lawyers = (from presentation in _context.Presentations
                            join lawyer in _context.Lawyers
                            on new { ID = presentation.LawyerId }
                            equals new { ID = lawyer.ID }
-                           where presentation.CourtCaseNo!.Contains(courtcaseno) &&
+                           where (presentation.CourtCaseNo == courtcaseno) &&
                                    (presentation.Available == 1)
-                           select new { presentation, lawyer }).Distinct();
+                           select new { presentation, lawyer });
 
             if (lawyers == null)
             {
-                return NotFound();
+                return null;
             }
             return await lawyers.ToListAsync();
 
@@ -74,11 +73,6 @@ namespace LawyerAPI.Controllers
             }
 
             return presentation;
-        }
-
-        private string CourtExists(string courtcaseno)
-        {
-            return _context.Presentations.Any(e => e.CourtCaseNo!.Contains(courtcaseno)).ToString();
         }
     }
 }
